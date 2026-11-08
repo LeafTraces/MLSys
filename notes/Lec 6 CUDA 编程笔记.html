@@ -1,0 +1,581 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Lec 6 CUDA 编程笔记</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 与 Lec 5 笔记同一套单列版式；A 蓝 / B 琥珀 / C 青；global 读 = 红，shared = 紫，活跃线程 = 青 */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#18212b; --muted:#5b6876; --line:#d5dbe2; --grid:#e7ebf0;
+  --a:#2f6fd6; --a-soft:#dbe7fb; --b:#c9821a; --b-soft:#f8e8cd; --c:#178a7a; --c-soft:#d2efe9;
+  --p:#6a5fd0; --p-soft:#e4e1fa; --hot:#c8413b; --hot-soft:#f6dcda; --code-bg:#eef1f5; --on:#ffffff;
+  --f-display:"Noto Serif SC","Songti SC",serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12171d; --surface:#1a2129; --ink:#e4e9ee; --muted:#9aa7b4; --line:#2e3843; --grid:#232c36;
+  --a:#6fa0f0; --a-soft:#1f3458; --b:#e2a54a; --b-soft:#4a3615; --c:#4cc2b0; --c-soft:#163f3a;
+  --p:#a49cf0; --p-soft:#2e2a55; --hot:#ee7a73; --hot-soft:#4d2321; --code-bg:#222a33; --on:#0e1318; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#12171d; --surface:#1a2129; --ink:#e4e9ee; --muted:#9aa7b4; --line:#2e3843; --grid:#232c36;
+  --a:#6fa0f0; --a-soft:#1f3458; --b:#e2a54a; --b-soft:#4a3615; --c:#4cc2b0; --c-soft:#163f3a;
+  --p:#a49cf0; --p-soft:#2e2a55; --hot:#ee7a73; --hot-soft:#4d2321; --code-bg:#222a33; --on:#0e1318; color-scheme:dark }
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75}
+.wrap{max-width:820px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-direction:column;gap:10px;border-bottom:2px solid var(--ink);padding-bottom:22px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(30px,6vw,44px);line-height:1.2;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:900;font-size:26px;margin:28px 0 0;text-wrap:balance;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+h2 .part{font-family:var(--f-mono);font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.06em}
+h3{font-family:var(--f-display);font-weight:600;font-size:20px;margin:6px 0 0;text-wrap:balance}
+h3 .pg{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:400;margin-left:8px}
+p{margin:0;max-width:68ch}
+a{color:var(--a)}
+p code,li code,td code{font-family:var(--f-mono);font-size:.88em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--f-mono);font-size:13.5px;line-height:1.6}
+ul{margin:0;padding-left:1.3em;max-width:68ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:14px}
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.key{border-left:3px solid var(--c);padding:6px 0 6px 14px;font-weight:500;max-width:68ch}
+.q{border-left:3px solid var(--b);padding:6px 0 6px 14px;max-width:68ch}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-weight:700;color:var(--muted);font-size:13px}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.cap{font-size:13.5px;color:var(--muted)}
+.cap b{color:var(--ink)}
+.svgbox{overflow-x:auto}
+.svgbox svg{display:block;max-width:100%;height:auto;margin:0 auto}
+svg text{font-family:var(--f-body);fill:var(--ink)}
+svg .tm{fill:var(--muted)}
+.formula{font-family:var(--f-mono);font-size:15px;background:var(--code-bg);border-radius:8px;padding:12px 16px;overflow-x:auto;white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 14px;cursor:pointer}
+.controls button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.controls button:focus-visible,summary:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.steplab{font-size:13px;color:var(--muted)}
+.exp{font-size:14.5px;background:var(--bg);border-radius:8px;padding:10px 14px;min-height:78px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:8px;padding:8px 12px;min-width:0}
+.stat .l{font-size:12px;color:var(--muted)}
+.stat .v{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums}
+.bars{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.barrow{display:flex;align-items:center;gap:10px}
+.barrow .n{width:120px;flex:none}
+.barrow .bar{flex:1;height:10px;background:var(--grid);border-radius:5px;overflow:hidden}
+.barrow .bar span{display:block;height:100%;background:var(--hot);transition:width .3s}
+.barrow .t{width:64px;text-align:right;flex:none}
+.codebox{font-family:var(--f-mono);font-size:13px;background:var(--code-bg);border-radius:8px;padding:8px 12px;white-space:pre;overflow-x:auto}
+.pit td:first-child{color:var(--hot)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+details summary{cursor:pointer;font-weight:500}
+details[open] summary{margin-bottom:8px}
+details p{color:var(--muted)}
+.video{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface);text-decoration:none;color:inherit}
+.video .t{font-weight:700}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">CMU 15-442/642 · Machine Learning Systems · Lecture 6</div>
+  <h1>GPU 架构与 CUDA 编程</h1>
+  <div class="meta">
+    <span>Slides：06-CUDA-programming.pdf（69 页）</span>
+    <span>前置：Lec 5 分块与复用 · 61C SIMD / OpenMP</span>
+  </div>
+</header>
+
+<section class="summary">
+  <p><strong>一句话：</strong>GPU 把 SIMD 推到极致：很多 ALU 共享一条指令流，再用大量线程轮流上场，把内存等待藏起来。CUDA 让你以 grid → block → thread 的层级一次启动成千上万个线程；硬件以 32 个线程（warp）为单位执行，以 block 为单位调度。写快的 kernel，本质上还是 Lec 5 那件事：<strong>让每个读进来的数被用很多次</strong>，再加上两条 GPU 特有的规矩：同一个 warp 走同一个分支，相邻线程访问相邻地址。</p>
+  <p class="key">四个案例都在讲同一件事：朴素写法里同一个数被不同线程重复读；分块让它只读一次，把复用放进 shared memory 和寄存器。</p>
+</section>
+
+<!-- ================= PART 1 ================= -->
+<h2><span class="part">PART 1</span>CUDA 编程模型</h2>
+
+<section>
+  <h3>从 SIMD 到 GPU<span class="pg">p.2–4</span></h3>
+  <p>61C 的 SSE 是一条指令处理 4 个 float。GPU 让几十个 ALU 共享一次取指和译码，把省下来的控制逻辑和大 cache 的面积都换成计算单元。</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>61C 学过的</th><th>GPU</th></tr>
+    <tr><td>一条指令内</td><td>SSE：4 路</td><td>warp：32 路</td></tr>
+    <tr><td>多核之间</td><td>OpenMP：8 个左右线程</td><td>同时驻留几万个线程</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h3>线程层级：grid → block → thread<span class="pg">p.7–10</span></h3>
+  <p>一次 kernel 启动 = 一个 grid；grid 由若干 block 组成，每个 block 里有若干 thread。两级都可以是最多 3 维的，用 <code>dim3</code> 描述。slides 的例子是在 12 × 6 的矩阵上算 C = A + B：</p>
+<pre>dim3 threadsPerBlock(4, 3, 1);        // 每个 block 4 × 3 = 12 个线程
+dim3 numBlocks(Nx/4, Ny/3, 1);        // (3, 2, 1)：6 个 block
+matrixAdd&lt;&lt;&lt;numBlocks, threadsPerBlock&gt;&gt;&gt;(A, B, C);   // 共 72 个线程</pre>
+  <div class="fig">
+    <div class="svgbox"><svg id="gridfig" viewBox="0 0 680 380" width="680" role="img" aria-label="12×6 矩阵被分成 6 个 4×3 的 block，高亮线程 blockIdx (1,0)、threadIdx (3,2) 负责 C[2][7]"></svg></div>
+    <div class="cap">每块颜色区域是一个 block，每个小方格是一个线程。<b>x 对应列 i，y 对应行 j</b>，所以代码写 <code>C[j][i]</code>。</div>
+  </div>
+<pre>__global__ void matrixAdd(float A[Ny][Nx], float B[Ny][Nx], float C[Ny][Nx]) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;   // 全局列号
+    int j = blockIdx.y * blockDim.y + threadIdx.y;   // 全局行号
+    C[j][i] = A[j][i] + B[j][i];
+}</pre>
+  <div class="tbl"><table>
+    <tr><th>内置变量</th><th>含义</th><th>本例</th></tr>
+    <tr><td><code>gridDim</code></td><td>grid 有几个 block</td><td>(3, 2, 1)</td></tr>
+    <tr><td><code>blockIdx</code></td><td>我在第几个 block</td><td>(0..2, 0..1)</td></tr>
+    <tr><td><code>blockDim</code></td><td>每个 block 有几个线程</td><td>(4, 3, 1)</td></tr>
+    <tr><td><code>threadIdx</code></td><td>我在 block 内的位置</td><td>(0..3, 0..2)</td></tr>
+  </table></div>
+  <p class="key">全局编号 = 第几个 block × 每个 block 的线程数 + block 内编号。和 Lec 5 的「块号 × 块大小 + 块内偏移」是同一个思路。</p>
+  <p>例：<code>blockIdx = (2, 1)</code>、<code>threadIdx = (1, 2)</code> → i = 2×4+1 = 9，j = 1×3+2 = 5，负责 <code>C[5][9]</code>。算完用形状自查：行号要在 0..5，列号要在 0..11。</p>
+</section>
+
+<section>
+  <h3>Host 与 Device<span class="pg">p.10–11、18–20</span></h3>
+  <div class="tbl"><table>
+    <tr><th></th><th>Host</th><th>Device</th></tr>
+    <tr><td>在哪运行</td><td>CPU，串行</td><td>GPU，大规模并行</td></tr>
+    <tr><td>函数标记</td><td>普通函数</td><td><code>__global__</code>：kernel，由 host 启动<br><code>__device__</code>：只能被 device 代码调用</td></tr>
+    <tr><td>内存</td><td>主机内存</td><td>显存（独立的地址空间）</td></tr>
+  </table></div>
+<pre>float* deviceA;
+cudaMalloc(&amp;deviceA, bytes);                              // 在 GPU 上分配
+float value = 1.0f;
+cudaMemcpy(deviceA, &amp;value, sizeof(float), cudaMemcpyHostToDevice);
+// deviceA[0] = 1.0f;  ✗ deviceA 存的是显存地址，CPU 拿它去主机内存里找，通常直接段错误</pre>
+  <p>PyTorch 的 <code>.to("cuda")</code> 和 <code>.cpu()</code>，底层就是 <code>cudaMemcpy</code>。另外注意：<code>cudaMemset</code> 和 <code>memset</code> 一样是<b>按字节</b>填充的，只适合清零，不能用来赋值 1.0f。</p>
+</section>
+
+<section>
+  <h3>越界保护<span class="pg">p.12</span></h3>
+  <p>线程数是启动时你自己定的，不会自动等于数据量。标准套路是「向上取整算 block 数 + kernel 里判断越界」：</p>
+<pre>int numBlocks = (N + 127) / 128;      // 不能写 N / 128：整数除法会向下取整
+// kernel 内：
+int i = blockIdx.x * blockDim.x + threadIdx.x;
+if (i &gt;= N) return;</pre>
+  <p>N = 1000 时启动 8 个 block、1024 个线程，最后 24 个线程什么都不做。</p>
+</section>
+
+<section>
+  <h3>条件分支与发散<span class="pg">p.13–17</span></h3>
+  <p>同一个 warp 的 32 个线程共享一条指令流。遇到 <code>if</code> 时，如果有的线程走 if、有的走 else，硬件只能把两个分支先后都执行一遍，不该走的线程被屏蔽、空等。代价是两个分支的时间之和。</p>
+  <div class="tbl"><table>
+    <tr><th>分支条件（按 i 每 32 个一组）</th><th>结果</th></tr>
+    <tr><td><code>if (i % 2 == 0)</code></td><td>每个 warp 里都是一半一半，<b>每个 warp 都发散</b>，利用率减半</td></tr>
+    <tr><td><code>if (i &lt; 512)</code></td><td>512 是 32 的倍数，每个 warp 要么全走 if、要么全走 else，<b>不发散</b></td></tr>
+    <tr><td><code>if (i &lt; 500)</code></td><td>只有包含 480..511 的那个 warp 发散</td></tr>
+  </table></div>
+  <p class="key">发散只发生在同一个 warp 内部；不同 warp 走不同分支没有代价。</p>
+</section>
+
+<section>
+  <h3>设备内存模型<span class="pg">p.21</span></h3>
+  <div class="tbl"><table>
+    <tr><th>内存</th><th>谁可见</th><th>对应 Lec 5</th></tr>
+    <tr><td>线程私有（寄存器）</td><td>本线程</td><td>寄存器：寄存器分块</td></tr>
+    <tr><td><b>shared memory</b></td><td>同一 block 的所有线程</td><td>L1 cache，但<b>由你手动管理</b></td></tr>
+    <tr><td>global memory</td><td>所有线程</td><td>DRAM</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h3>例子：一维卷积与 halo<span class="pg">p.22–24</span></h3>
+  <p><code>output[i] = (input[i] + input[i+1] + input[i+2]) / 3</code>。版本 1 里每个线程直接读 3 次 global，一个 128 线程的 block 共读 384 次。但每个 input 会被相邻 3 个输出用到，大部分是重复读。版本 2 先协作装进 shared memory：</p>
+  <div class="fig">
+    <div class="svgbox"><svg viewBox="0 0 680 200" width="680" role="img" aria-label="support 数组 130 个位置：前 128 个由线程 t 搬，最后 2 个由线程 0、1 补搬">
+      <text x="64" y="100" text-anchor="end" font-size="13" class="tm" dominant-baseline="central">support</text>
+      <g id="halocells"></g>
+      <text x="246" y="52" text-anchor="middle" font-size="13">线程 t 搬 input[base+t] → support[t]</text>
+      <text x="462" y="52" text-anchor="middle" font-size="13" style="fill:var(--b)">线程 0、1 补搬</text>
+      <rect x="362" y="72" width="152" height="56" rx="6" fill="none" style="stroke:var(--muted)" stroke-dasharray="4 3"/>
+      <text x="438" y="152" text-anchor="middle" font-size="13" class="tm">output[base+127] 要用 support[127..129]</text>
+      <text x="300" y="182" text-anchor="middle" font-size="13" class="tm">base = blockIdx.x × 128</text>
+    </svg></div>
+    <div class="cap">这个 block 要算 128 个输出，需要 base..base+129 共 <b>130 个输入</b>。128 个线程每人搬 1 个，差的 2 个由 <code>threadIdx.x &lt; 2</code> 的线程补上。多出来的这部分叫 <b>halo</b>，宽度 = 窗口宽度 K − 1。</div>
+  </div>
+<pre>__shared__ float support[THREADS_PER_BLK + 2];
+support[threadIdx.x] = input[index];
+if (threadIdx.x &lt; 2)
+    support[THREADS_PER_BLK + threadIdx.x] = input[index + THREADS_PER_BLK];
+__syncthreads();                  // 否则线程 127 读 support[128] 时，线程 0 可能还没写
+for (int i = 0; i &lt; 3; i++)
+    result += support[threadIdx.x + i];</pre>
+  <p>每个 block 只读 130 次 global。这就是 Lec 5「cache 分块」的 GPU 版本。</p>
+</section>
+
+<section>
+  <h3>同步原语<span class="pg">p.25</span></h3>
+  <ul>
+    <li><code>__syncthreads()</code>：等同一个 block 的所有线程到达。只在 block 内有效。</li>
+    <li>原子操作，如 <code>atomicAdd</code>：读-改-写不会被打断。</li>
+    <li>kernel 结束时有隐式的全局屏障。</li>
+  </ul>
+  <p class="key">block 之间没有同步原语。原因见 Part 2 的「block 调度」。</p>
+</section>
+
+<!-- ================= PART 2 ================= -->
+<h2><span class="part">PART 2</span>GPU 硬件如何跑起几万个线程</h2>
+
+<section>
+  <p class="q"><b>出发点的矛盾：</b>GTX 980 有 16 个 SM，每个 SM 每周期执行 4 × 32 个乘加，全芯片 2048 个 ALU；但每个 SM 能驻留 64 个 warp × 32 = 2048 个线程，全芯片 32768 个。线程数是 ALU 数的 16 倍，为什么要这么多线程待命？</p>
+
+  <h3>warp：硬件真正调度的单位<span class="pg">p.29–30、41</span></h3>
+  <p>硬件以 32 个线程为一组取指和执行，这一组叫 warp。同一个 warp 永远执行同一条指令。发散的单位就是 warp；block 由若干 warp 组成（128 线程 = 4 个 warp），所以 block 线程数最好是 32 的倍数。</p>
+
+  <h3>延迟隐藏：卡住就换人</h3>
+  <p>访问显存要几百个周期。CPU 用大 cache 和乱序执行，尽量别让线程卡住；GPU 的做法是：一个 warp 在等数据时，调度器立刻切到另一个数据已经到位的 warp。</p>
+  <div class="fig">
+    <div class="svgbox"><svg id="latfig" viewBox="0 0 680 330" width="680" role="img" aria-label="4 个 warp 各计算 2 周期、等内存 6 周期，交错执行后 ALU 每个周期都忙"></svg></div>
+    <div class="cap">单看任何一个 warp，它 75% 的时间都在等；但最下面一行 ALU 一个周期都没空。<b>多出来的线程是用来轮流填补等待的。</b></div>
+  </div>
+  <p>切换几乎免费：所有驻留 warp 的寄存器<b>同时</b>放在 SM 巨大的寄存器堆里，不用像操作系统那样保存、恢复。</p>
+  <div class="formula">每个调度器需要的 warp 数 ≈ 1 + L / c　　（c = 每次算几个周期，L = 每次等几个周期）</div>
+  <p>注意是<b>每个调度器</b>。一个 SM 有 4 个调度器，所以 c = 10、L = 200 时，每个调度器需要 21 个 warp；一个 SM 驻留 16 个 warp，平摊下来每个调度器只有 4 个，远远不够。这种「算得少、等得久」的 kernel，光靠提高占用率救不回来，必须减少访存。</p>
+
+  <h3>代价：资源决定能驻留多少 warp<span class="pg">p.27–28、31–36</span></h3>
+  <p>每个驻留的 block 会一直占着三种资源：<b>执行上下文</b>（每 SM 最多 64 个 warp）、<b>寄存器</b>（每线程用量 × 线程数）、<b>shared memory</b>。能驻留的 block 数 = 三者各自能容纳的最小值。驻留 warp 数 ÷ 上限 = <b>占用率</b>。</p>
+  <p>slides 的动画假设一个 SM 只有 1.5 KB shared memory，卷积 block 每个要 130 × 4 = 520 B：放 2 个用 1040 B，第 3 个要 1560 B &gt; 1536 B，放不下。（slides 从第 32 页起把 520 B 写成了 512 B，是笔误。）</p>
+  <div class="tbl"><table>
+    <tr><th>例：96 KB shared、最多 64 warp，block 256 线程</th><th>驻留 block</th><th>warp</th><th>占用率</th></tr>
+    <tr><td>每个 block 40 KB shared</td><td>⌊96/40⌋ = 2</td><td>16</td><td>16/64 = 25%</td></tr>
+    <tr><td>每个 block 24 KB shared</td><td>4</td><td>32</td><td>32/64 = 50%</td></tr>
+  </table></div>
+  <p class="key">想要更多复用（更大的分块），就要更多 shared memory 和寄存器；想要更好的延迟隐藏，每个 block 占的资源就得少。两者互相拉扯，调 GEMM 的分块大小就是在找平衡点。</p>
+
+  <h3>block 调度：为什么 block 之间不能互相等待<span class="pg">p.26、28、32–40</span></h3>
+  <p>调度器把 block 动态地分到资源足够的 SM 上，谁结束就补谁，执行顺序无法预测。CUDA 约定 block 之间不能有依赖，换来两个好处：同一份程序能在 6 个 SM 和 132 个 SM 的卡上运行；不会死锁。</p>
+  <p>反例：GPU 只能同时驻留 16 个 block，你启动 100 个。如果这 16 个驻留位置都被「自旋等待后面某个 block」的 block 占着，它们永远不会结束、永远不释放位置，它们等的 block 就永远上不来。硬件不保证顺序，也不抢占，所以干脆禁止。</p>
+
+  <h3>十年演进：GTX 980 → H100<span class="pg">p.42–47</span></h3>
+  <div class="tbl"><table>
+    <tr><th></th><th>GTX 980（2014）</th><th>H100（2022）</th><th>变化</th></tr>
+    <tr><td>warp 大小</td><td>32</td><td>32</td><td>没变</td></tr>
+    <tr><td>每 SM 最多 warp</td><td>64</td><td>64</td><td>没变</td></tr>
+    <tr><td>SM 数</td><td>16</td><td>132</td><td>×8</td></tr>
+    <tr><td>每 SM shared memory</td><td>96 KB</td><td>256 KB</td><td>×2.7</td></tr>
+    <tr><td>峰值算力</td><td>4.6 TFLOPS</td><td>~1000 TFLOPS（FP16 Tensor Core）</td><td>×200</td></tr>
+  </table></div>
+  <div class="formula">GTX 980 峰值 = 16 SM × 4 × 32 × 2 (乘加 = 2 FLOP) × 1.126 GHz ≈ 4.61 TFLOPS</div>
+  <p>SM 只多了 8 倍，算力多了 200 倍，差距来自 <b>Tensor Core</b>：普通 ALU 一条指令让每个线程做 1 次标量乘加；Tensor Core 一条指令算完一个小矩阵块的 D = A·B + C，通常是 FP16/BF16 这类低精度。所以项目路线是 P1 先用 FP32 ALU 把分块练扎实，P3 再上 Tensor Core。（slides 写的 H100 频率 1110 MHz 不准确，实际加速频率接近 2 GHz。）</p>
+</section>
+
+<!-- ================= PART 3 ================= -->
+<h2><span class="part">PART 3</span>案例一：GPU 矩阵乘法</h2>
+
+<section>
+  <h3>先判断瓶颈：算术强度</h3>
+  <p>算术强度 = 每从 global 读 1 字节能做多少次浮点运算。GTX 980 要跑满算力，需要约 4.6 TFLOPS ÷ 224 GB/s ≈ <b>20 FLOP/byte</b>。朴素 kernel 每做 1 次乘加（2 FLOP）就要读 2 个 float（8 字节），只有 <b>0.25 FLOP/byte</b>，差了约 80 倍。所以必须让每个读进来的数被用很多次。</p>
+
+  <h3>三种写法，一步步看<span class="pg">p.49–52</span></h3>
+  <p>下面用 8×8 的小矩阵，只看 C 左上角 4×4 区域。重点看 A、B 格子上的数字：<b>这个数累计被从 global 读了几次</b>。三种写法跑完分别是 4、2、1。</p>
+  <div class="fig" id="mm">
+    <div class="controls" role="group" aria-label="选择写法">
+      <button type="button" data-m="naive" aria-pressed="true">① 朴素</button>
+      <button type="button" data-m="reg" aria-pressed="false">② 寄存器分块</button>
+      <button type="button" data-m="smem" aria-pressed="false">③ + shared 分块</button>
+    </div>
+    <div class="controls">
+      <button type="button" data-a="prev" aria-label="上一步">←</button>
+      <button type="button" data-a="play">播放</button>
+      <button type="button" data-a="next" aria-label="下一步">→</button>
+      <button type="button" data-a="reset">重来</button>
+      <span class="steplab" data-o="step"></span>
+    </div>
+    <div class="svgbox"><svg data-o="svg" viewBox="0 0 680 412" width="680" role="img" aria-label="A、B、C 矩阵与 shared memory 状态"></svg></div>
+    <div class="exp" data-o="exp"></div>
+    <div class="stats">
+      <div class="stat"><div class="l">本步 global 读取</div><div class="v" data-o="m1">0</div></div>
+      <div class="stat"><div class="l">累计 global 读取</div><div class="v" data-o="m2">0</div></div>
+      <div class="stat"><div class="l">累计 shared 读取</div><div class="v" data-o="m3">—</div></div>
+    </div>
+    <div class="bars" data-o="bars"></div>
+  </div>
+
+  <h3>把动画里的数字换成字母</h3>
+  <div class="tbl"><table>
+    <tr><th>字母</th><th>含义</th><th>动画里</th></tr>
+    <tr><td>N</td><td>矩阵边长，也是 k 方向的步数</td><td>8</td></tr>
+    <tr><td>L</td><td>一个 block 负责的 C 区域边长</td><td>4（紫框）</td></tr>
+    <tr><td>V</td><td>一个线程负责的 C 小块边长</td><td>2（T0–T3）</td></tr>
+    <tr><td>S</td><td>shared 版本每次沿 k 搬几步</td><td>2</td></tr>
+  </table></div>
+  <div class="tbl"><table>
+    <tr><th>写法</th><th>一块 L×L 区域的 global 读取</th><th>动画</th><th>整个矩阵</th></tr>
+    <tr><td>① 朴素</td><td>L² 个线程 × 每步 2 个 × N 步 = 2NL²</td><td>256</td><td>2N³</td></tr>
+    <tr><td>② 寄存器分块</td><td>(L/V)² 个线程 × 每步 2V 个 × N 步 = 2NL²/V</td><td>128</td><td>2N³/V</td></tr>
+    <tr><td>③ shared 分块</td><td>A 的 L 行 + B 的 L 列各读一次 = 2NL</td><td>64</td><td>2N³/L</td></tr>
+  </table></div>
+  <p>整个矩阵有 (N/L)² 块，乘上去就是最后一列。③ 中 shared 的读取总量是 2N³/V。和 Lec 5 对照：</p>
+  <div class="tbl"><table>
+    <tr><th>Lec 5（CPU）</th><th>Lec 6（GPU）</th><th>决定的是</th></tr>
+    <tr><td>cache 分块 b</td><td>block 分块 L</td><td>最慢一层（DRAM / global）的流量</td></tr>
+    <tr><td>寄存器分块 v</td><td>线程分块 V</td><td>中间层（L1 / shared）的流量</td></tr>
+    <tr><td>硬件自动装 cache</td><td>线程协作、手动搬进 shared</td><td>GPU 多出来的工作</td></tr>
+  </table></div>
+  <p>L = 64 时，算术强度变成 2N³ ÷ (2N³/64 × 4 B) = <b>16 FLOP/byte</b>，已接近 GTX 980 需要的 20。</p>
+
+  <h3>两个 __syncthreads()</h3>
+<pre>for (int ko = 0; ko &lt; N; ko += S) {
+    __syncthreads();        // ①
+    // 全 block 协作：A、B 当前小条 → sA、sB
+    __syncthreads();        // ②
+    for (int ki = 0; ki &lt; S; ++ki) { /* 从 sA、sB 取数，做 V×V 外积 */ }
+}</pre>
+  <div class="tbl"><table>
+    <tr><th>屏障</th><th>位置</th><th>防什么</th></tr>
+    <tr><td>②</td><td>搬运后、计算前</td><td><b>写后读</b>：读到别人还没搬进来的数</td></tr>
+    <tr><td>①</td><td>计算后、下次搬运前</td><td><b>读后写</b>：别人还在用旧数据，你就把它覆盖了</td></tr>
+  </table></div>
+
+  <h3>协作搬运<span class="pg">p.53</span></h3>
+<pre>int tid = threadIdx.y * blockDim.x + threadIdx.x;   // 线程编号压成一维
+for (int j = 0; j &lt; L * S / nthreads; ++j) {
+    int idx = j * nthreads + tid;                   // 第 j 轮拿第 idx 个
+    int y = idx / L, x = idx % L;
+    s[y][x] = A[k + y][yblock * L + x];
+}</pre>
+  <p>例：L = 64、S = 8、256 个线程 → 512 个元素分 2 轮。tid = 5 搬 idx = 5 → (0, 5)，idx = 261 → (4, 5)。<b>相邻 tid 搬同一行里相邻的 x</b>，对应 global 里相邻的地址：一个 warp 一次读走连续的 32 个 float（合并访存）。</p>
+
+  <h3>分块越大越好吗？</h3>
+  <div class="tbl"><table>
+    <tr><th></th><th>甲：L=64, V=4, S=8</th><th>乙：L=128, V=8, S=8</th></tr>
+    <tr><td>每 block 线程数 (L/V)²</td><td>256</td><td>256</td></tr>
+    <tr><td>shared：2·S·L·4 B</td><td>4 KiB</td><td>8 KiB</td></tr>
+    <tr><td>每线程寄存器 ≥ V² + 2V</td><td>24</td><td>80</td></tr>
+    <tr><td>global 读取 2N³/L</td><td>1×</td><td>0.5×</td></tr>
+    <tr><td>每 SM 驻留（65536 寄存器、64 warp）</td><td>8 block，100%</td><td>⌊65536/20480⌋ = 3 block，37.5%</td></tr>
+    <tr><td>N = 512 时的 block 数</td><td>64</td><td>16</td></tr>
+  </table></div>
+  <p>RTX 5080 有 84 个 SM。N = 512 时甲有 20 个 SM 闲着，乙有 68 个闲着。<b>分块大小没有固定最优值</b>：大矩阵用大分块省流量，小矩阵用大分块喂不饱 SM。cuBLAS 会按尺寸选不同的 kernel，P1 的 benchmark 也要测多种 N。</p>
+
+  <h3>slides 里的笔误</h3>
+  <ul>
+    <li>第 51–52 页 <code>b[:] = sA[ki, ...]</code> 应为 <code>sB</code>。</li>
+    <li>循环变量写 <code>ko</code>，搬运语句里用了 <code>k</code>，是同一个意思。</li>
+    <li><code>sA</code> 取自 <code>A[k:k+S, yblock*L:...]</code>，说明 slides 默认 A 转置存放，和 Lec 5 让 A、B 都按行读是同一个用意。</li>
+  </ul>
+</section>
+
+<!-- ================= PART 4 ================= -->
+<h2><span class="part">PART 4</span>案例二：并行归约</h2>
+
+<section>
+  <p>求和、求最大值在 softmax 和 LayerNorm 里每层都要用。GPU 用<b>树形归约</b>：每轮两两相加，log₂n 轮剩一个。</p>
+  <h3>跨 block：拆成多次 kernel 启动<span class="pg">p.56–58</span></h3>
+  <p>block 之间不能等待，所以每次启动让每个 block 写出一个部分和，再对部分和启动下一次。kernel 结束就是全局屏障，启动开销很小。例：n = 2²⁰、256 线程/block → 4096 个 block → 16 个 → 1 个，共 <b>3 次启动</b>；最后一次只有 16 个数，靠越界判断处理多余线程。</p>
+
+  <h3>block 内：三种写法<span class="pg">p.59–68</span></h3>
+  <p>动画把规模缩小：16 个线程，warp 画成 4 个线程，shared memory 画成 4 个 bank。</p>
+  <div class="fig" id="red">
+    <div class="controls" role="group" aria-label="选择版本">
+      <button type="button" data-m="1" aria-pressed="true">V1 交错寻址</button>
+      <button type="button" data-m="2" aria-pressed="false">V2 跨步下标</button>
+      <button type="button" data-m="3" aria-pressed="false">V3 顺序寻址</button>
+    </div>
+    <div class="controls">
+      <button type="button" data-a="prev" aria-label="上一步">←</button>
+      <button type="button" data-a="play">播放</button>
+      <button type="button" data-a="next" aria-label="下一步">→</button>
+      <button type="button" data-a="reset">重来</button>
+      <span class="steplab" data-o="step"></span>
+    </div>
+    <div class="codebox" data-o="code"></div>
+    <div class="svgbox"><svg data-o="svg" viewBox="0 0 680 250" width="680" role="img" aria-label="sdata、bank 与 4 个 warp 的线程"></svg></div>
+    <div class="exp" data-o="exp"></div>
+    <div class="stats">
+      <div class="stat"><div class="l">本轮执行的 warp</div><div class="v" data-o="m1">0</div></div>
+      <div class="stat"><div class="l">其中发散</div><div class="v" data-o="m2">0</div></div>
+      <div class="stat"><div class="l">本轮 bank 冲突</div><div class="v" data-o="m3">—</div></div>
+      <div class="stat"><div class="l">累计 warp 执行</div><div class="v" data-o="m4">0</div></div>
+    </div>
+  </div>
+
+  <h3>bank 冲突</h3>
+  <p>shared memory 分成 <b>32 个 bank</b>，第 i 个 4 字节字在 bank i mod 32。一个 bank 每周期只服务一个地址：warp 的 32 个线程访问 32 个不同 bank，一次完成；k 个线程访问同一 bank 的不同地址，就要排队 k 次，叫 <b>k 路冲突</b>（同一个地址会广播，不算冲突）。<b>冲突路数 = 被访问最多的那个 bank 的线程数。</b></p>
+  <p>例：V2 第 1 轮，t0–t31 访问 <code>sdata[2t]</code>，bank(t) = 2t mod 32。t 与 t+16 撞在同一个 bank（0 ≤ t &lt; 16），16 个偶数 bank 各被 2 个线程访问，奇数 bank 空闲 → 2 路冲突。</p>
+
+  <h3>两个 __syncthreads()（p.60 的问题）</h3>
+  <ul>
+    <li><b>装入之后：</b>保证所有线程都把 global 的数写进 sdata，否则归约时会读到还没装好的位置。</li>
+    <li><b>循环每一轮：</b>下一轮要读上一轮别的线程写的结果。V3 中 s = 128 时 t64 执行 sdata[64] += sdata[192]；s = 64 时 t0 读 sdata[64]。没有屏障，t0 可能在 t64 写完之前读到旧值，漏掉 sdata[192]。</li>
+  </ul>
+
+  <h3>真实规模（256 线程、warp = 32、32 bank）</h3>
+  <div class="tbl"><table>
+    <tr><th>版本</th><th>累计 warp 执行</th><th>发散</th><th>bank 冲突</th></tr>
+    <tr><td>V1 交错寻址</td><td>47</td><td>前 5 轮 8 个 warp 全部发散</td><td>无</td></tr>
+    <tr><td>V2 跨步下标</td><td>12</td><td>只在最后 5 轮（不足 32 个线程干活，无法避免）</td><td>2、4、8、8、8、4、2 路</td></tr>
+    <tr><td>V3 顺序寻址</td><td>12</td><td>同 V2</td><td>无</td></tr>
+  </table></div>
+  <p>例：V1 第 1 轮 128 个线程干活，却要执行全部 8 个 warp，利用率 50%；V3 第 1 轮同样 128 个线程，只执行 4 个 warp，利用率 100%。</p>
+  <p class="key">两条规矩：同一个 warp 里的线程要么一起干活、要么一起歇着（防发散）；相邻线程访问相邻地址（shared 上防 bank 冲突，global 上就是合并访存）。</p>
+  <p class="cap">slides 的编号：第 63 页的「Version 2」是这里的 V2，第 67–68 页的「Version 2: Sequential Addressing」实际是第三个版本。第 65–67 页用的「coalesced」严格说在 shared memory 上对应 bank 冲突。</p>
+</section>
+
+<!-- ================= REVIEW ================= -->
+<h2><span class="part">REVIEW</span>易错点</h2>
+<section>
+  <div class="tbl"><table class="pit">
+    <tr><th>错误</th><th>正确做法</th></tr>
+    <tr><td>用 y 分量算 i、用 x 分量算 j</td><td>x 对应列 i，y 对应行 j，所以写 <code>C[j][i]</code></td></tr>
+    <tr><td>把 blockDim 的两个分量记反</td><td><code>dim3(4, 3)</code> → blockDim.x = 4，blockDim.y = 3</td></tr>
+    <tr><td>算出下标不检查</td><td>用矩阵形状自查范围，C[6][…] 在 6 行矩阵里已越界</td></tr>
+    <tr><td>block 数写成 <code>N / 128</code></td><td>整数向上取整：<code>(N + 127) / 128</code></td></tr>
+    <tr><td>在 host 上写 <code>deviceA[0] = …</code></td><td>host 准备数据后 <code>cudaMemcpy</code>；<code>cudaMemset</code> 按字节填充，只能清零</td></tr>
+    <tr><td>占用率分母写错</td><td>分母是每 SM 的 warp 上限（如 64）</td></tr>
+    <tr><td>拿「每 SM 的 warp 数」和「每调度器需要的 warp 数」比</td><td>每 SM 有 4 个调度器，先平摊再比</td></tr>
+    <tr><td>只看到大分块省流量</td><td>同时检查寄存器/shared 占用率，以及 block 数是否少于 SM 数</td></tr>
+    <tr><td>说「地址 0 和 32 撞」</td><td>冲突问的是哪些<b>线程</b>撞：访问 0 和 32 的是 t0 和 t16</td></tr>
+    <tr><td>以为循环屏障只为最后一步</td><td>每一轮都依赖上一轮别的线程写的结果</td></tr>
+  </table></div>
+</section>
+
+<h2><span class="part">SELF-TEST</span>自测题</h2>
+<section>
+  <details><summary>Q1. N = 3000，每 block 256 线程。启动几个 block？多少线程空闲？</summary>
+    <p>(3000 + 255) / 256 = 12 个 block，3072 个线程，72 个空闲。</p></details>
+  <details><summary>Q2. dim3(8, 4) 的 block，blockIdx = (1, 2)、threadIdx = (5, 3) 负责 C 的哪个元素？</summary>
+    <p>i = 1×8+5 = 13，j = 2×4+3 = 11，C[11][13]。</p></details>
+  <details><summary>Q3. if (threadIdx.x &lt; 48) … else …，block 128 线程，几个 warp 发散？</summary>
+    <p>warp 1（t32–t63）里 t32–t47 走 if、t48–t63 走 else，只有这 1 个发散。</p></details>
+  <details><summary>Q4. 每 SM 96 KB shared、64 warp。block 128 线程、用 20 KB shared，占用率？</summary>
+    <p>⌊96/20⌋ = 4 个 block × 4 warp = 16 warp，25%。</p></details>
+  <details><summary>Q5. 一维卷积窗口宽度 5，block 256 线程，shared 数组要多大？几个线程补搬？</summary>
+    <p>256 + 4 = 260 个 float；threadIdx.x &lt; 4 的 4 个线程补搬。</p></details>
+  <details><summary>Q6. 两级分块 L = 32，global 读取量是朴素的几分之一？算术强度多少？</summary>
+    <p>1/32；2N³ ÷ (2N³/32 × 4 B) = 8 FLOP/byte。</p></details>
+  <details><summary>Q7. 协作搬运 L = 32、S = 16、nthreads = 128，几轮？tid = 40 每轮搬哪？</summary>
+    <p>512/128 = 4 轮；idx = 40、168、296、424 → (1, 8)、(5, 8)、(9, 8)、(13, 8)。</p></details>
+  <details><summary>Q8. 32 个 bank，warp 访问 sdata[4t]（t = 0..31），几路冲突？</summary>
+    <p>bank = 4t mod 32，只用到 8 个 bank，每个 4 个线程 → 4 路冲突。</p></details>
+  <details><summary>Q9. 为什么 V3 的循环是 s 从大到小，而不是从小到大？</summary>
+    <p>s 从大到小时，t 访问 sdata[t] 和 sdata[t+s]，干活的线程编号连续、地址连续：既不发散也无 bank 冲突。</p></details>
+  <details><summary>Q10. n = 2²⁴、每 block 512 线程，归约要启动几次 kernel？</summary>
+    <p>2²⁴ → 2¹⁵ → 2⁶ → 1，共 3 次。</p></details>
+</section>
+
+<h2><span class="part">VIDEO</span>推荐视频</h2>
+<section>
+  <a class="video" href="https://www.youtube.com/watch?v=jYCxVirq4d0">
+    <span class="t">CMU 10-414/714 Deep Learning Systems · Lecture 12 – GPU Acceleration</span>
+    <span style="color:var(--muted);font-size:14px">Tianqi Chen 主讲。与本讲的矩阵乘法案例（线程级寄存器分块、block 级 shared 分块、协作搬运）几乎同一套讲法，适合复习 Part 3。</span>
+    <span style="color:var(--a);font-size:14px">youtube.com/watch?v=jYCxVirq4d0 ↗</span>
+  </a>
+</section>
+
+<footer>15-442 自学笔记 · Lecture 6</footer>
+</div>
+
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function tx(p,x,y,s,o){const e=el("text",Object.assign({x,y,"font-size":12,"text-anchor":"middle","dominant-baseline":"central",style:"fill:var(--muted)"},o||{}),p);e.textContent=s;return e}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+
+/* grid figure */
+(function(){const g=document.getElementById("gridfig");
+["blockIdx.x = 0","blockIdx.x = 1","blockIdx.x = 2"].forEach((s,i)=>tx(g,230+i*160,56,s));
+tx(g,140,130,"blockIdx.y = 0",{"text-anchor":"end"});tx(g,140,250,"blockIdx.y = 1",{"text-anchor":"end"});
+for(let by=0;by<2;by++)for(let bx=0;bx<3;bx++){const alt=(bx+by)%2;el("rect",{x:150+bx*160,y:70+by*120,width:160,height:120,rx:4,style:`fill:${alt?"var(--p-soft)":"var(--c-soft)"};stroke:${alt?"var(--p)":"var(--c)"};stroke-width:.8`},g)}
+for(let j=0;j<6;j++)for(let i=0;i<12;i++){const hl=i===7&&j===2;el("rect",{x:150+i*40+5,y:70+j*40+5,width:30,height:30,rx:4,style:hl?"fill:var(--b);stroke:var(--b)":"fill:none;stroke:var(--muted);stroke-width:.5;opacity:.6"},g)}
+for(let i=0;i<12;i++)tx(g,170+i*40,326,i);
+tx(g,390,350,"高亮线程：blockIdx = (1, 0)，threadIdx = (3, 2)");
+tx(g,390,370,"i = 1×4 + 3 = 7（列），j = 0×3 + 2 = 2（行）→ 负责 C[2][7]",{style:"fill:var(--ink)","font-size":13});})();
+
+/* halo cells */
+(function(){const g=document.getElementById("halocells");const labs=["0","1","2","…","125","126","127","128","129"];
+labs.forEach((s,k)=>{const x=80+k*48;if(s==="…"){tx(g,x+22,100,"…",{style:"fill:var(--ink)","font-size":16});return}const halo=k>=7;el("rect",{x,y:80,width:44,height:40,rx:4,style:`fill:${halo?"var(--b-soft)":"var(--c-soft)"};stroke:${halo?"var(--b)":"var(--c)"}`},g);tx(g,x+22,100,s,{style:"fill:var(--ink)","font-size":14})});})();
+
+/* latency figure */
+(function(){const g=document.getElementById("latfig");const U=24,X0=120;
+const rows=[[[0,2,"c"],[2,8,"w"],[8,10,"c"],[10,16,"w"],[16,18,"c"],[18,20,"w"]],[[2,4,"c"],[4,10,"w"],[10,12,"c"],[12,18,"w"],[18,20,"c"]],[[4,6,"c"],[6,12,"w"],[12,14,"c"],[14,20,"w"]],[[6,8,"c"],[8,14,"w"],[14,16,"c"],[16,20,"w"]]];
+rows.forEach((r,w)=>{tx(g,110,64+w*40,"warp "+w,{"text-anchor":"end"});r.forEach(([a,b,k])=>el("rect",{x:X0+a*U,y:50+w*40,width:(b-a)*U-2,height:28,rx:4,style:k==="c"?"fill:var(--c)":"fill:var(--grid);stroke:var(--line)"},g))});
+tx(g,110,244,"ALU",{"text-anchor":"end",style:"fill:var(--ink)","font-size":14});
+for(let t=0;t<10;t++){el("rect",{x:X0+t*2*U,y:230,width:2*U-2,height:28,rx:4,style:"fill:var(--c-soft);stroke:var(--c)"},g);tx(g,X0+t*2*U+U,244,"W"+(t%4),{style:"fill:var(--ink)"})}
+el("line",{x1:X0,y1:282,x2:600,y2:282,style:"stroke:var(--muted)"},g);tx(g,620,282,"时间 →");
+el("rect",{x:220,y:300,width:16,height:16,rx:3,style:"fill:var(--c)"},g);tx(g,244,308,"在 ALU 上计算",{"text-anchor":"start"});
+el("rect",{x:370,y:300,width:16,height:16,rx:3,style:"fill:var(--grid);stroke:var(--line)"},g);tx(g,394,308,"等内存返回",{"text-anchor":"start"});})();
+
+/* stepper helper */
+function stepper(root,maxStep,render,interval){const st={cur:0,timer:null};const play=root.querySelector('[data-a="play"]');
+function stop(){clearInterval(st.timer);st.timer=null;play.textContent="播放"}
+root.querySelector('[data-a="next"]').onclick=()=>{if(st.cur<maxStep()){st.cur++;render(st.cur)}};
+root.querySelector('[data-a="prev"]').onclick=()=>{if(st.cur>0){st.cur--;render(st.cur)}};
+root.querySelector('[data-a="reset"]').onclick=()=>{stop();st.cur=0;render(0)};
+play.onclick=()=>{if(st.timer){stop();return}if(st.cur>=maxStep())st.cur=0;play.textContent="暂停";st.timer=setInterval(()=>{if(st.cur>=maxStep()){stop();return}st.cur++;render(st.cur)},interval)};
+st.stop=stop;return st}
+
+/* ===== matmul animation ===== */
+(function(){const root=document.getElementById("mm"),sv=root.querySelector('[data-o="svg"]'),O=k=>root.querySelector(`[data-o="${k}"]`);
+const N=8,R=4,CS=22,PA=[60,214],PB=[250,24],PC=[250,214],PSB=[470,48],PSA=[470,232];
+const TOT={naive:256,reg:128,smem:64},NAME={naive:"① 朴素",reg:"② 寄存器分块",smem:"③ + shared 分块"};let mode="naive";
+tx(sv,PA[0]-10,PA[1]+88,"A",{"text-anchor":"end","font-size":15,style:"fill:var(--ink)"});
+tx(sv,PB[0]-10,PB[1]+88,"B",{"text-anchor":"end","font-size":15,style:"fill:var(--ink)"});
+tx(sv,PC[0]+88,PC[1]+190,"C（只看左上 4×4 区域）");
+el("rect",{x:PA[0]-2,y:PA[1]-2,width:N*CS+4,height:R*CS+4,rx:3,fill:"none",style:"stroke:var(--muted)","stroke-dasharray":"3 3"},sv);
+el("rect",{x:PB[0]-2,y:PB[1]-2,width:R*CS+4,height:N*CS+4,rx:3,fill:"none",style:"stroke:var(--muted)","stroke-dasharray":"3 3"},sv);
+function grid(p,rows,cols,w,h){const c=[];for(let i=0;i<rows;i++){c.push([]);for(let j=0;j<cols;j++){const r=el("rect",{x:p[0]+j*w+1,y:p[1]+i*h+1,width:w-2,height:h-2,rx:2},sv);const t=tx(sv,p[0]+j*w+w/2,p[1]+i*h+h/2,"",{"font-size":11,style:"fill:var(--ink)"});c[i].push({r,t})}}return c}
+const cA=grid(PA,N,N,CS,CS),cB=grid(PB,N,N,CS,CS),cC=grid(PC,N,N,CS,CS);
+const labB=tx(sv,PSB[0],PSB[1]-14,"",{"text-anchor":"start"}),labA=tx(sv,PSA[0],PSA[1]-14,"",{"text-anchor":"start"});
+const sB=grid(PSB,2,4,40,CS),sA=grid(PSA,4,2,40,CS);const tg=el("g",{},sv);
+function setC(c,fill,op,txtc){c.r.setAttribute("style",`fill:${fill};fill-opacity:${op};stroke:var(--line);stroke-width:.5`);c.t.setAttribute("style",`fill:${txtc||"var(--ink)"}`)}
+function tiles(){tg.innerHTML="";if(mode==="naive"){for(let i=0;i<R;i++)for(let j=0;j<R;j++)el("rect",{x:PC[0]+j*CS+1,y:PC[1]+i*CS+1,width:CS-2,height:CS-2,rx:2,fill:"none",style:"stroke:var(--b);stroke-width:1"},tg);tx(tg,PC[0]+R*CS+8,PC[1]+R*CS/2,"每格 1 个线程",{"text-anchor":"start","font-size":11,style:"fill:var(--b)"})}else{let n=0;for(let bi=0;bi<2;bi++)for(let bj=0;bj<2;bj++){el("rect",{x:PC[0]+bj*2*CS+1,y:PC[1]+bi*2*CS+1,width:2*CS-2,height:2*CS-2,rx:3,fill:"none",style:"stroke:var(--b);stroke-width:1.6"},tg);tx(tg,PC[0]+bj*2*CS+CS,PC[1]+bi*2*CS+CS,"T"+(n++),{"font-size":11,style:"fill:var(--b)"})}tx(tg,PC[0]+R*CS+8,PC[1]+R*CS/2,"4 线程 × 2×2",{"text-anchor":"start","font-size":11,style:"fill:var(--b)"});if(mode==="smem")el("rect",{x:PC[0]-3,y:PC[1]-3,width:R*CS+6,height:R*CS+6,rx:4,fill:"none",style:"stroke:var(--p);stroke-width:1.4","stroke-dasharray":"5 3"},tg)}}
+function sim(cur){const ca=[...Array(N)].map(()=>Array(N).fill(0)),cb=[...Array(N)].map(()=>Array(N).fill(0));let g=0,sh=0,step=0,prog=0,hiA=[],hiB=[],hiS=false,ko=-1;
+for(let t=0;t<cur;t++){const last=t===cur-1;
+if(mode!=="smem"){const k=t,m=mode==="naive"?4:2;for(let i=0;i<R;i++){ca[i][k]+=m;cb[k][i]+=m}step=mode==="naive"?32:16;g+=step;prog=t+1;if(last){for(let i=0;i<R;i++){hiA.push([i,k]);hiB.push([k,i])}}}
+else{ko=Math.floor(t/2)*2;if(t%2===0){for(let i=0;i<R;i++)for(let d=0;d<2;d++){ca[i][ko+d]++;cb[ko+d][i]++}step=16;g+=16;if(last)for(let i=0;i<R;i++)for(let d=0;d<2;d++){hiA.push([i,ko+d]);hiB.push([ko+d,i])}}else{step=0;sh+=32;prog=ko+2;if(last)hiS=true}}}
+return{ca,cb,g,sh,step,prog,hiA,hiB,hiS,ko}}
+function paint(cells,cnt,hi){for(let i=0;i<N;i++)for(let j=0;j<N;j++){const c=cells[i][j],n=cnt[i][j],h=hi.some(p=>p[0]===i&&p[1]===j);if(h)setC(c,"var(--hot)",.9,"var(--on)");else if(n>0)setC(c,"var(--hot)",Math.min(.14+.08*n,.5));else setC(c,"var(--code-bg)",1);c.t.textContent=n>0?n:""}}
+function explain(cur,s){if(cur===0)return mode==="naive"?"起点：C 左上 4×4 区域由 <b>16 个线程</b>计算，每个线程负责 1 个格子，都要沿 k 走 8 步。点「→」或「播放」开始。":mode==="reg"?"起点：同样的 4×4 区域，现在只用 <b>4 个线程</b>（T0–T3），每个负责 2×2 = 4 个格子，结果放在自己的寄存器里。":"起点：4 个线程组成一个 <b>block</b>（紫色虚线框）。先协作把数据搬进 shared memory，再从 shared 取数计算。每次沿 k 推进 S = 2 步。";
+const k=cur-1;if(mode==="naive")return`k = ${k}：16 个线程<b>各自</b>从 global 读 1 个 A[i][${k}] 和 1 个 B[${k}][j]。同一行的 4 个线程要的是<b>同一个</b> A[i][${k}]，所以它被读了 4 次。本步 = 16 线程 × 2 个 = <b>32 次</b>。`;
+if(mode==="reg")return`k = ${k}：每个线程从 global 读 A 的 2 个 + B 的 2 个，在寄存器里更新自己的 4 个格子。A[i][${k}] 现在只被同一行块的 2 个线程读。本步 = 4 线程 × 4 个 = <b>16 次</b>。`;
+if(k%2===0)return`ko = ${s.ko}，搬运：4 个线程分工，把 A[0:4][${s.ko}:${s.ko+2}] 和 B[${s.ko}:${s.ko+2}][0:4] 共 16 个数读进 shared（右侧），<b>每个数只读 1 次</b>。然后 __syncthreads()。`;
+return`ko = ${s.ko}，计算：4 个线程都从 <b>shared</b> 取数，完成 k = ${s.ko}、${s.ko+1} 两轮外积。global 读取 <b>0 次</b>；shared 读取 4 × 4 × 2 = 32 次。算完再 __syncthreads()，才能换下一段。`}
+function render(cur){const s=sim(cur);paint(cA,s.ca,s.hiA);paint(cB,s.cb,s.hiB);
+for(let i=0;i<N;i++)for(let j=0;j<N;j++){const c=cC[i][j];if(i<R&&j<R)setC(c,"var(--c)",.08+.55*s.prog/8);else setC(c,"var(--code-bg)",1);c.t.textContent=""}
+const sm=mode==="smem",show=sm&&s.ko>=0;labB.textContent=sm?"shared：sB（2×4）":"shared（本写法不用）";labA.textContent=sm?"shared：sA（4×2）":"";
+const sp=(c,txt)=>{c.t.textContent=show?txt:"";if(s.hiS)setC(c,"var(--p)",.85,"var(--on)");else if(show)setC(c,"var(--p)",.22);else setC(c,"var(--code-bg)",sm?1:.4)};
+sB.forEach((row,d)=>row.forEach((c,j)=>sp(c,`B${s.ko+d},${j}`)));sA.forEach((row,i)=>row.forEach((c,d)=>sp(c,`A${i},${s.ko+d}`)));
+O("m1").textContent=s.step;O("m2").textContent=`${s.g} / ${TOT[mode]}`;O("m3").textContent=sm?s.sh:"—";O("step").textContent=`第 ${cur} / 8 步`;O("exp").innerHTML=explain(cur,s);
+O("bars").innerHTML=["naive","reg","smem"].map(m=>`<div class="barrow"><span class="n" style="${m===mode?"color:var(--ink);font-weight:700":""}">${NAME[m]}</span><span class="bar"><span style="width:${(m===mode?s.g:TOT[m])/256*100}%;${m===mode?"":"opacity:.35"}"></span></span><span class="t">${TOT[m]} 次</span></div>`).join("")+`<div>完成整个 4×4 区域所需的 global 读取总数</div>`}
+const st=stepper(root,()=>8,render,1400);
+root.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{mode=b.dataset.m;st.stop();st.cur=0;root.querySelectorAll("[data-m]").forEach(x=>x.setAttribute("aria-pressed",x===b));tiles();render(0)});
+tiles();render(0);})();
+
+/* ===== reduction animation ===== */
+(function(){const root=document.getElementById("red"),sv=root.querySelector('[data-o="svg"]'),O=k=>root.querySelector(`[data-o="${k}"]`);
+const B=16,W=4,NB=4,INIT=[3,1,7,0,4,1,6,3,2,5,0,4,1,3,2,6];let mode=1;
+const CODE={1:"for (s = 1; s < blockDim.x; s *= 2) {\n  if (tid % (2*s) == 0)\n    sdata[tid] += sdata[tid + s];\n  __syncthreads();\n}",2:"for (s = 1; s < blockDim.x; s *= 2) {\n  int index = 2 * s * tid;\n  if (index < blockDim.x)\n    sdata[index] += sdata[index + s];\n  __syncthreads();\n}",3:"for (s = blockDim.x / 2; s > 0; s /= 2) {\n  if (tid < s)\n    sdata[tid] += sdata[tid + s];\n  __syncthreads();\n}"};
+const cx=i=>20+i*40+18;tx(sv,10,14,"sdata 下标",{"text-anchor":"start"});for(let i=0;i<B;i++)tx(sv,cx(i),30,i);
+const lines=el("g",{},sv);const cells=[];for(let i=0;i<B;i++){const r=el("rect",{x:20+i*40,y:40,width:36,height:36,rx:4},sv);const t=tx(sv,cx(i),58,"",{"font-size":14,style:"fill:var(--ink)"});cells.push({r,t})}
+tx(sv,10,92,"bank",{"text-anchor":"start"});for(let i=0;i<B;i++)tx(sv,cx(i),92,"b"+(i%NB),{"font-size":11});
+const dots=[],wl=[];for(let g=0;g<4;g++){el("rect",{x:20+g*160+10,y:150,width:140,height:40,rx:6,fill:"none",style:"stroke:var(--line)"},sv);for(let l=0;l<W;l++){const x=20+g*160+35+l*30;const c=el("circle",{cx:x,cy:170,r:11},sv);const tt=tx(sv,x,170,"t"+(g*W+l),{"font-size":10});dots.push({c,tt,x})}tx(sv,20+g*160+80,206,"warp "+g,{style:"fill:var(--ink)"});wl.push(tx(sv,20+g*160+80,226,""))}
+const levels=()=>mode===3?[8,4,2,1]:[1,2,4,8];
+function ops(s){const o=[];for(let t=0;t<B;t++){if(mode===1&&t%(2*s)===0)o.push([t,t,t+s]);if(mode===2&&2*s*t<B)o.push([t,2*s*t,2*s*t+s]);if(mode===3&&t<s)o.push([t,t,t+s])}return o}
+function render(cur){const L=levels(),v=INIT.slice();let tot=0,last=null;for(let k=0;k<cur;k++){const o=ops(L[k]);tot+=new Set(o.map(x=>Math.floor(x[0]/W))).size;const b=v.slice();o.forEach(([t,d,s])=>v[d]=b[d]+b[s]);if(k===cur-1)last={s:L[k],o}}
+const o=last?last.o:[];lines.innerHTML="";const dst=new Set(o.map(x=>x[1])),src=new Set(o.map(x=>x[2]));
+cells.forEach((c,i)=>{c.t.textContent=v[i];if(dst.has(i)){c.r.setAttribute("style","fill:var(--c);stroke:var(--c)");c.t.setAttribute("style","fill:var(--on)")}else if(src.has(i)){c.r.setAttribute("style","fill:var(--hot-soft);stroke:var(--hot)");c.t.setAttribute("style","fill:var(--ink)")}else{c.r.setAttribute("style","fill:var(--code-bg);stroke:var(--line)");c.t.setAttribute("style","fill:var(--ink)")}});
+const act=new Map(o.map(x=>[x[0],x]));dots.forEach((d,t)=>{const a=act.get(t);d.c.setAttribute("style",a?"fill:var(--c);stroke:var(--c)":"fill:var(--code-bg);stroke:var(--line)");d.tt.setAttribute("style",a?"fill:var(--on)":"fill:var(--muted)");if(a)el("line",{x1:d.x,y1:158,x2:cx(a[1]),y2:78,style:"stroke:var(--c);stroke-width:1.2;opacity:.7"},lines)});
+let nW=0,nD=0,conf=1;const per=[0,0,0,0];o.forEach(x=>per[Math.floor(x[0]/W)]++);
+for(let g=0;g<4;g++){const n=per[g];if(n===0){wl[g].textContent=last?"整组跳过":"";wl[g].setAttribute("style","fill:var(--muted)")}else{nW++;if(n<W){nD++;wl[g].textContent=`发散：${n}/${W} 在干活`;wl[g].setAttribute("style","fill:var(--hot)")}else{wl[g].textContent="全员执行";wl[g].setAttribute("style","fill:var(--c)")}const cnt={};o.filter(x=>Math.floor(x[0]/W)===g).forEach(x=>{const b=x[1]%NB;cnt[b]=(cnt[b]||0)+1});conf=Math.max(conf,...Object.values(cnt))}}
+O("step").textContent=cur===0?"已装入 shared，第 0 / 4 轮":`第 ${cur} / 4 轮（s = ${last.s}）`;O("code").textContent=CODE[mode];
+O("m1").textContent=last?nW:0;O("m2").textContent=last?nD:0;const m3=O("m3");m3.textContent=last?(conf>1?conf+" 路":"无"):"—";m3.style.color=conf>1?"var(--hot)":"var(--ink)";O("m4").textContent=tot;
+let e;if(!last)e="起点：每个线程已把 1 个数从 global 搬进 sdata（总和 = 48）。<b>青色线</b>连着干活的线程和它写入的格子，<b>红框</b>格子是被加过去的数。";
+else{const s=last.s,ids=o.map(x=>"t"+x[0]).join("、");
+if(mode===1)e=`s = ${s}：只有编号是 ${2*s} 的倍数的线程干活（${ids}），<b>散落在各个 warp 里</b>，于是 ${nW} 个 warp 都要执行，其中 ${nD} 个发散。`;
+else if(mode===2)e=`s = ${s}：干活的是<b>编号最小的一批</b>线程（${ids}），后面的 warp 整组跳过。但线程 t 访问 sdata[${2*s}·t]，相邻线程的地址隔 ${2*s} 个${conf>1?`，落在同一个 bank 上，造成 <b>${conf} 路 bank 冲突</b>，要分 ${conf} 次完成`:""}。`;
+else e=`s = ${s}：编号最小的一批线程干活（${ids}），线程 t 访问 sdata[t] 和 sdata[t+${s}]：<b>相邻线程访问相邻地址</b>，各落在不同 bank，没有冲突，也没有发散。`}
+O("exp").innerHTML=e}
+const st=stepper(root,()=>4,render,1600);
+root.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{mode=+b.dataset.m;st.stop();st.cur=0;root.querySelectorAll("[data-m]").forEach(x=>x.setAttribute("aria-pressed",x===b));render(0)});
+render(0);})();
+})();
+</script>
+
+</body></html>
