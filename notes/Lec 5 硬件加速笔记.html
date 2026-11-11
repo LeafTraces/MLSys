@@ -1,0 +1,543 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Lec 5 硬件加速笔记</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 单列笔记，正文 ~68ch；每个概念 = 文字 + 一张图（交互图带控制条）。A 蓝 / B 琥珀 / C 青 贯穿全篇 */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --ink:#18212b; --muted:#5b6876; --line:#d5dbe2; --grid:#e7ebf0;
+  --a:#2f6fd6; --a-soft:#dbe7fb; --b:#c9821a; --b-soft:#f8e8cd; --c:#178a7a; --c-soft:#d2efe9;
+  --hot:#c8413b; --hot-soft:#f6dcda; --code-bg:#eef1f5;
+  --f-display:"Noto Serif SC","Songti SC",serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12171d; --surface:#1a2129; --ink:#e4e9ee; --muted:#9aa7b4; --line:#2e3843; --grid:#232c36;
+  --a:#6fa0f0; --a-soft:#1f3458; --b:#e2a54a; --b-soft:#4a3615; --c:#4cc2b0; --c-soft:#163f3a;
+  --hot:#ee7a73; --hot-soft:#4d2321; --code-bg:#222a33; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#12171d; --surface:#1a2129; --ink:#e4e9ee; --muted:#9aa7b4; --line:#2e3843; --grid:#232c36;
+  --a:#6fa0f0; --a-soft:#1f3458; --b:#e2a54a; --b-soft:#4a3615; --c:#4cc2b0; --c-soft:#163f3a;
+  --hot:#ee7a73; --hot-soft:#4d2321; --code-bg:#222a33; color-scheme:dark }
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75}
+.wrap{max-width:820px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px;display:flex;flex-direction:column;gap:28px}
+header{display:flex;flex-direction:column;gap:10px;border-bottom:2px solid var(--ink);padding-bottom:22px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(30px,6vw,44px);line-height:1.2;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:900;font-size:26px;margin:28px 0 0;text-wrap:balance;display:flex;gap:12px;align-items:baseline}
+h2 .part{font-family:var(--f-mono);font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.06em}
+h3{font-family:var(--f-display);font-weight:600;font-size:20px;margin:6px 0 0;text-wrap:balance}
+h3 .pg{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:400;margin-left:8px}
+p{margin:0;max-width:68ch}
+a{color:var(--a)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+p code,li code,td code{background:var(--code-bg);padding:1px 5px;border-radius:4px}
+pre{background:var(--code-bg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--f-mono);font-size:13.5px;line-height:1.6}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:14px}
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.summary strong{color:var(--ink)}
+.key{border-left:3px solid var(--c);padding:6px 0 6px 14px;font-weight:500}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14.5px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-weight:700;color:var(--muted);font-size:13px;letter-spacing:.02em}
+tr.best td{background:var(--c-soft)}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.fig .cap{font-size:13.5px;color:var(--muted)}
+.fig .cap b{color:var(--ink)}
+.svgbox{overflow-x:auto}
+.svgbox svg{display:block;max-width:100%;height:auto;margin:0 auto}
+svg text{font-family:var(--f-body);fill:var(--ink)}
+svg .t-muted{fill:var(--muted)}
+svg .t-mono{font-family:var(--f-mono)}
+.formula{font-family:var(--f-mono);font-size:15px;background:var(--code-bg);border-radius:8px;padding:12px 16px;overflow-x:auto;white-space:nowrap}
+.formula .a{color:var(--a);font-weight:600}.formula .b{color:var(--b);font-weight:600}.formula .c{color:var(--c);font-weight:600}
+.chipA,.chipB,.chipC{font-weight:700}
+.chipA{color:var(--a)}.chipB{color:var(--b)}.chipC{color:var(--c)}
+
+/* 控件 */
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+.controls button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 14px;cursor:pointer}
+.controls button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.controls button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+
+/* stride explorer */
+.sx{display:grid;grid-template-columns:auto 1fr;gap:14px 20px;align-items:start}
+.sx-label{font-size:13px;color:var(--muted);padding-top:6px;white-space:nowrap}
+.mat{display:inline-grid;gap:3px}
+.mem{display:flex;flex-wrap:wrap;gap:3px}
+.cell{width:38px;height:38px;display:grid;place-items:center;font-family:var(--f-mono);font-size:14px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--muted);transition:background .2s,color .2s,border-color .2s;position:relative}
+.cell.on{background:var(--a-soft);border-color:var(--a);color:var(--ink);font-weight:600}
+.cell.ord::after{content:attr(data-ord);position:absolute;top:-8px;right:-6px;font-size:10px;background:var(--a);color:var(--surface);border-radius:999px;padding:0 5px;line-height:15px}
+.mem .cell{width:34px}
+.mem-idx{font-size:10px;color:var(--muted);text-align:center;width:34px;font-family:var(--f-mono)}
+.memwrap{display:flex;flex-direction:column;gap:2px}
+.memrow{display:flex;flex-wrap:wrap;gap:3px}
+.sx-note{grid-column:1/-1;font-size:14.5px;background:var(--bg);border-radius:8px;padding:10px 14px}
+@media (max-width:520px){.sx{grid-template-columns:1fr}.sx-label{padding-top:0}}
+
+/* cache lines */
+.cl-row{display:flex;flex-direction:column;gap:8px}
+.cl-title{font-size:14px;font-weight:500}
+.cl-lines{display:flex;flex-wrap:wrap;gap:6px}
+.cl-line{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;width:112px;padding:2px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+.cl-line.full{width:min(100%,448px)}
+.cl-slot{height:12px;background:var(--grid);border-radius:1px}
+.cl-slot.used{background:var(--a)}
+.cl-slot.waste{background:var(--hot-soft)}
+.cl-stat{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.cl-stat b{color:var(--ink)}.cl-stat .bad{color:var(--hot)}
+
+/* register tiling calculator */
+.rt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:620px){.rt{grid-template-columns:1fr}}
+.rt-ctrl{display:flex;flex-direction:column;gap:12px}
+.rt-ctrl label{display:flex;justify-content:space-between;font-size:14px}
+.rt-ctrl input[type=range]{width:100%;accent-color:var(--a)}
+.rt-out{display:flex;flex-direction:column;gap:6px;font-family:var(--f-mono);font-size:14px}
+.rt-out .ok{color:var(--c);font-weight:600}.rt-out .over{color:var(--hot);font-weight:600}
+.meter{height:10px;background:var(--grid);border-radius:999px;overflow:hidden}
+.meter span{display:block;height:100%;background:var(--c);transition:width .2s}
+.meter.over span{background:var(--hot)}
+.tilepic{display:grid;grid-template-columns:auto auto;gap:6px;justify-content:center;align-items:end}
+.tp-grid{display:inline-grid;gap:2px}
+.tp{width:22px;height:22px;border-radius:3px}
+.tp.a{background:var(--a)}.tp.b{background:var(--b)}.tp.c{background:var(--c-soft);border:1px solid var(--c)}
+.tp-lab{font-size:12px;color:var(--muted);text-align:center}
+
+/* pitfalls & self test */
+.pit td:first-child{color:var(--hot)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+details summary{cursor:pointer;font-weight:500}
+details[open] summary{margin-bottom:8px}
+details p{color:var(--muted)}
+.video{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface)}
+.video .t{font-weight:700}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">CMU 15-442/642 · Machine Learning Systems · Lecture 5</div>
+  <h1>硬件加速：从 stride 到分块</h1>
+  <div class="meta">
+    <span>Slides：<a href="https://mlsyscourse.org/slides/05-hardware-acceleration.pdf">05-hardware-acceleration.pdf</a></span>
+    <span>对应 61C：Lab 7 分块 · Lab 9 SIMD · Lab 10 OpenMP · Project 4</span>
+  </div>
+</header>
+
+<section class="summary">
+  <p><strong>一句话：</strong>计算图里每个节点的 <code>compute</code> 最终都是一个 kernel。让它变快有三板斧：<strong>向量化</strong>、<strong>数据布局</strong>、<strong>并行化</strong>。以矩阵乘法为例，计算先当作免费，<strong>真正的成本是访存</strong>。寄存器分块和 cache 分块各减少一层的读取量，本质都是<strong>数据复用</strong>。</p>
+  <p class="key">某个访问不依赖某个循环变量，就能沿这个循环被复用。分块，就是把这种复用框在快的存储层里。</p>
+</section>
+
+<!-- ============ PART 1 ============ -->
+<h2><span class="part">PART 1</span>通用加速技巧</h2>
+
+<section>
+  <h3>向量化<span class="pg">p.7</span></h3>
+  <p>两个长度 256 的 float 数组相加：128 位向量指令一次处理 4 个 float，循环从 256 次变成 64 次。A、B、C 需要按 16 字节对齐，这就是 61C 里 <code>_mm_load_ps</code>（要求对齐）和 <code>_mm_loadu_ps</code>（不要求）的区别。</p>
+  <div class="fig">
+    <div class="svgbox">
+      <svg viewBox="0 0 640 150" width="640" role="img" aria-label="标量加法一次 1 个元素，向量加法一次 4 个元素">
+        <text x="0" y="22" font-size="14" font-weight="700">标量：每条指令 1 个</text>
+        <g id="scalarRow"></g>
+        <text x="0" y="92" font-size="14" font-weight="700">向量：每条指令 4 个（128 bit）</text>
+        <g id="vecRow"></g>
+      </svg>
+    </div>
+    <div class="cap">深色是一条指令处理的元素。向量化后，每 4 个元素只需一次加载、一次加法、一次存储。</div>
+  </div>
+</section>
+
+<section>
+  <h3>数据布局与 stride<span class="pg">p.8–9</span></h3>
+  <p>内存是一维的。张量 = <b>一块一维内存 + 形状 + strides + 起始偏移</b>。元素 A[i][j] 的位置（以元素为单位）：</p>
+  <div class="formula">offset = i × stride[0] + j × stride[1]</div>
+  <div class="tbl"><table>
+    <tr><th>布局</th><th>strides（元素）</th><th>3×4 float32 例子</th></tr>
+    <tr><td>行主序（C / NumPy 默认）</td><td><code>(列数, 1)</code></td><td>A：<code>(4, 1)</code>，字节 <code>(16, 4)</code></td></tr>
+    <tr><td>列主序（Fortran）</td><td><code>(1, 行数)</code></td><td>—</td></tr>
+    <tr><td>转置视图 A.T</td><td>交换两个 stride</td><td><code>(1, 4)</code>，字节 <code>(4, 16)</code></td></tr>
+  </table></div>
+  <p>例：A[2][1] 的偏移 = 2×4 + 1×1 = <b>9</b>。在下图里，每个格子里的数字就是它在内存里的位置，可以直接对照。</p>
+
+  <div class="fig">
+    <div class="controls" role="group" aria-label="选择访问方式">
+      <button type="button" id="m-row" aria-pressed="true">沿 A 的第 0 行</button>
+      <button type="button" id="m-col" aria-pressed="false">沿 A.T 的第 0 行</button>
+      <button type="button" id="m-elem" aria-pressed="false">找 A[2][1]</button>
+      <button type="button" id="m-bc" aria-pressed="false">广播 b → 3 行</button>
+    </div>
+    <div class="sx">
+      <div class="sx-label" id="sx-matlabel">逻辑视图 A (3×4)</div>
+      <div><div class="mat" id="sx-mat"></div></div>
+      <div class="sx-label">一维内存</div>
+      <div class="memwrap" id="sx-mem"></div>
+      <div class="sx-note" id="sx-note"></div>
+    </div>
+  </div>
+
+  <p class="key">口诀：沿哪个下标走，就看哪个位置的 stride。先确定是谁的 strides，再确定是第几个。</p>
+
+  <h3>零拷贝操作：只改元数据</h3>
+  <div class="tbl"><table>
+    <tr><th>操作</th><th>怎么做到不复制</th></tr>
+    <tr><td>切片 <code>A[1:, :]</code></td><td>改起始偏移和形状</td></tr>
+    <tr><td>转置 <code>A.T</code></td><td>交换两个 stride</td></tr>
+    <tr><td>广播 <code>np.broadcast_to</code></td><td>被广播的维度 stride = 0</td></tr>
+  </table></div>
+  <p>Lab 1 的 <code>BroadcastOp.compute</code> 用的 <code>np.broadcast_to</code> 就是 stride 为 0 的视图（上图第四个按钮）。它<b>只读</b>，是因为多个逻辑元素指向同一个内存位置（别名）：写 <code>out[0][1]</code> 会让 <code>out[1][1]</code>、<code>out[2][1]</code> 和原数组一起变。</p>
+<pre>a = np.arange(6, dtype=np.float64).reshape(2, 3)
+a.strides                                        # (24, 8)  字节
+a.T.strides                                      # (8, 24)  交换
+np.broadcast_to(np.array([10., 20.]), (3, 2)).strides   # (0, 8)</pre>
+
+  <h3>stride 的代价：cache line 被浪费</h3>
+  <p>1024×1024 float32 矩阵，读 16 个元素。一条 cache line 是 64 字节 = 16 个 float32。</p>
+  <div class="fig">
+    <div class="cl-row">
+      <div class="cl-title">沿 <span class="chipA">A 的一行</span>：间隔 4 字节，连续</div>
+      <div class="cl-lines" id="cl-good"></div>
+      <div class="cl-stat">1 条 cache line · 利用率 <b>16/16 = 100%</b></div>
+    </div>
+    <div class="cl-row">
+      <div class="cl-title">沿 <span class="chipA">A.T 的一行</span>：间隔 1024×4 = 4096 字节 &gt; 64</div>
+      <div class="cl-lines" id="cl-bad"></div>
+      <div class="cl-stat">每个元素各占一条 → <b>16 条</b> · 利用率 <span class="bad">4/64 = 1/16</span></div>
+    </div>
+    <div class="cap"><b>蓝色</b>是用到的数据，<b>浅红</b>是读进来但没用的。中间被跳过的 cache line 根本没读，不计入。利用率的分母永远是 64 字节，和矩阵大小无关。</div>
+  </div>
+  <p>两个代价：<b>向量化困难</b>（向量加载要求连续）+ <b>cache 利用率低</b>。解决办法是计算前 <b>compact</b>（<code>np.ascontiguousarray</code> / <code>.contiguous()</code>）。权衡：视图便宜，后续计算可能变慢；何时 compact 是 ML 编译器的决策之一。</p>
+</section>
+
+<section>
+  <h3>并行化<span class="pg">p.10</span></h3>
+  <p><code>#pragma omp parallel for</code> 把循环迭代分给多个线程（61C Lab 10）。三者关系：向量化是一个核内一条指令多个数据，并行化是多个核同时算，数据布局决定前两者能否发挥作用。</p>
+</section>
+
+<!-- ============ PART 2 ============ -->
+<h2><span class="part">PART 2</span>矩阵乘法案例</h2>
+
+<section>
+  <p>slides 计算 <code>C = A · Bᵀ</code>，即 C[i][j] = Σ<sub>k</sub> A[i][k] · B[j][k]。<span class="chipA">A</span> 和 <span class="chipB">B</span> 都沿 k 方向、也就是按<b>行</b>读，在行主序下都是连续的。</p>
+
+  <h3>成本模型<span class="pg">p.13–14</span></h3>
+  <p>计算先当作免费，只统计「从哪一层读了多少数据」，这就是 roofline 分析的雏形。朴素三重循环中，最内层执行 n³ 次，每次从 DRAM 读两个元素：</p>
+  <div class="formula">朴素成本 = 2 · dram · n³</div>
+
+  <div class="fig">
+    <div class="svgbox">
+      <svg viewBox="0 0 640 300" width="640" role="img" aria-label="存储层次：DRAM、L1、寄存器，以及各层之间的读取量">
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs>
+        <rect x="150" y="14" width="340" height="56" rx="8" style="fill:var(--hot-soft);stroke:var(--hot)"/>
+        <text x="320" y="40" text-anchor="middle" font-size="16" font-weight="700">DRAM</text>
+        <text x="320" y="60" text-anchor="middle" font-size="13" class="t-muted">~200 ns</text>
+        <rect x="200" y="122" width="240" height="56" rx="8" style="fill:var(--b-soft);stroke:var(--b)"/>
+        <text x="320" y="148" text-anchor="middle" font-size="16" font-weight="700">L1 cache</text>
+        <text x="320" y="168" text-anchor="middle" font-size="13" class="t-muted">~0.5 ns（L2 ~7 ns）</text>
+        <rect x="245" y="230" width="150" height="56" rx="8" style="fill:var(--c-soft);stroke:var(--c)"/>
+        <text x="320" y="256" text-anchor="middle" font-size="16" font-weight="700">寄存器</text>
+        <text x="320" y="276" text-anchor="middle" font-size="13" class="t-muted">~0，计算视为免费</text>
+        <line x1="320" y1="72" x2="320" y2="118" style="stroke:var(--muted);stroke-width:2" marker-end="url(#arr)"/>
+        <line x1="320" y1="180" x2="320" y2="226" style="stroke:var(--muted);stroke-width:2" marker-end="url(#arr)"/>
+        <text x="334" y="100" font-size="14" class="t-mono" font-weight="600">n² + n³/b1</text>
+        <text x="20" y="100" font-size="13" class="t-muted">cache 分块 (b1, b2)</text>
+        <text x="334" y="208" font-size="14" class="t-mono" font-weight="600">n³/v1 + n³/v2</text>
+        <text x="20" y="208" font-size="13" class="t-muted">寄存器分块 (v1, v2)</text>
+      </svg>
+    </div>
+    <div class="cap">两层分块各管一层存储。DRAM 比 L1 慢约 400 倍，所以减少最上面那根箭头的流量最值钱。</div>
+  </div>
+</section>
+
+<section>
+  <h3>寄存器分块<span class="pg">p.15–16</span></h3>
+  <p>把 C 切成 v1×v2 的小块，整块在寄存器里算完再写回：</p>
+<pre>for i in range(n/v1):
+  for j in range(n/v2):
+    c[v1][v2] = 0              # 寄存器，k 循环前定义，一直复用
+    for k in range(n/v3):
+      a = A[i, k]              # v1×v3 → 寄存器
+      b = B[j, k]              # v2×v3 → 寄存器
+      c += a · bᵀ
+    C[i, j] = c                # 每个 C 元素只写回一次</pre>
+  <p><b>推导方法：读取总量 = 执行次数 × 每次读取量</b></p>
+  <div class="formula"><span class="a">L_A</span> = (n/v1)(n/v2)(n/v3) · v1·v3 = n³/v2<br><span class="b">L_B</span> = (n/v1)(n/v2)(n/v3) · v2·v3 = n³/v1</div>
+
+  <div class="fig">
+    <div class="svgbox">
+      <svg viewBox="0 0 640 230" width="640" role="img" aria-label="v3=1 时，A 的 v1 个元素与 B 的 v2 个元素做外积，更新 v1×v2 的 C 小块">
+        <text x="20" y="24" font-size="14" font-weight="700">v3 = 1 时，一次 k 迭代 = 一次外积</text>
+        <g id="op"></g>
+      </svg>
+    </div>
+    <div class="cap"><span class="chipA">A 的每个元素</span>和 <span class="chipB">B 的 v2 个元素</span>各乘一次，被复用了 v2 次，所以 A 的读取量降为 1/v2。同理 B 被复用 v1 次。<span class="chipC">C 小块</span>常驻寄存器。</div>
+  </div>
+
+  <p>寄存器代价是 v1·v3 + v2·v3 + v1·v2。v3 没有出现在读取成本里，只会多占寄存器，所以令 <b>v3 = 1</b>。下面的计算器里可以自己拖动试一试：</p>
+
+  <div class="fig">
+    <div class="rt">
+      <div class="rt-ctrl">
+        <div class="controls" role="group" aria-label="寄存器预算">
+          <button type="button" class="budget" data-b="16" aria-pressed="true">16 个寄存器</button>
+          <button type="button" class="budget" data-b="32" aria-pressed="false">32</button>
+          <button type="button" class="budget" data-b="64" aria-pressed="false">64</button>
+        </div>
+        <label for="v1">v1（A 小块行数）<span class="mono" id="v1o">3</span></label>
+        <input type="range" id="v1" min="1" max="10" value="3">
+        <label for="v2">v2（B 小块行数）<span class="mono" id="v2o">3</span></label>
+        <input type="range" id="v2" min="1" max="10" value="3">
+        <div class="rt-out">
+          <div>寄存器 = v1·v2 + v1 + v2 = <b id="regs">15</b> / <span id="bud">16</span> <span id="fit" class="ok">✓ 放得下</span></div>
+          <div class="meter" id="meter"><span id="meterbar"></span></div>
+          <div>读取量 = n³/v1 + n³/v2 = <b id="cost">0.667</b> n³</div>
+          <div class="t-muted" style="color:var(--muted)">相比朴素 2n³，减少到 <span id="ratio">33%</span></div>
+        </div>
+      </div>
+      <div class="tilepic" id="tilepic" aria-label="当前小块形状"></div>
+    </div>
+  </div>
+
+  <h3>为什么方形最好</h3>
+  <div class="tbl"><table>
+    <tr><th>(v1, v2)</th><th>寄存器</th><th>≤ 16</th><th>读取量</th></tr>
+    <tr><td>(1, 7)</td><td>15</td><td>✅</td><td>1.14 n³</td></tr>
+    <tr><td>(2, 4)</td><td>14</td><td>✅</td><td>0.75 n³</td></tr>
+    <tr class="best"><td><b>(3, 3)</b></td><td>15</td><td>✅</td><td><b>0.67 n³</b></td></tr>
+    <tr><td>(2, 5)</td><td>17</td><td>❌</td><td>—</td></tr>
+  </table></div>
+  <p>读取量 = n³ · (v1+v2) / (v1·v2)。分子是 A、B 小块占的寄存器，分母是 C 小块的面积，也就是复用的来源。v1+v2 固定时，v1 = v2 乘积最大（均值不等式）。约束 (v1+1)(v2+1) ≤ 17 的边界是双曲线，不是圆。GPU GEMM 中每个线程的小块通常是 4×4、8×8，原因就在这里。</p>
+</section>
+
+<section>
+  <h3>Cache 分块<span class="pg">p.17–18</span></h3>
+<pre>for i in range(n/b1):
+  a = A[i]            # b1 × n，DRAM → L1（只在外层）
+  for j in range(n/b2):
+    b = B[j]          # b2 × n，DRAM → L1（随 i 重复读）
+    C[i, j] = dot(a, bᵀ)   # 内部用寄存器分块</pre>
+
+  <div class="fig">
+    <div class="svgbox">
+      <svg viewBox="0 0 640 250" width="640" role="img" aria-label="A 的 b1 行与 B 的 b2 行同时放在 L1，算出 C 的 b1×b2 块">
+        <!-- A -->
+        <text x="90" y="22" text-anchor="middle" font-size="14" font-weight="700">A（n×n）</text>
+        <rect x="20" y="34" width="140" height="140" style="fill:var(--surface);stroke:var(--line)"/>
+        <rect x="20" y="62" width="140" height="28" style="fill:var(--a-soft);stroke:var(--a);stroke-width:2"/>
+        <text x="168" y="81" font-size="13" class="t-mono" style="fill:var(--a)">b1</text>
+        <text x="90" y="194" text-anchor="middle" font-size="13" class="t-muted">一块 b1 × n</text>
+        <!-- B -->
+        <text x="290" y="22" text-anchor="middle" font-size="14" font-weight="700">B（n×n）</text>
+        <rect x="220" y="34" width="140" height="140" style="fill:var(--surface);stroke:var(--line)"/>
+        <rect x="220" y="104" width="140" height="21" style="fill:var(--b-soft);stroke:var(--b);stroke-width:2"/>
+        <text x="368" y="119" font-size="13" class="t-mono" style="fill:var(--b)">b2</text>
+        <text x="290" y="194" text-anchor="middle" font-size="13" class="t-muted">一块 b2 × n</text>
+        <!-- C -->
+        <text x="500" y="22" text-anchor="middle" font-size="14" font-weight="700">C（n×n）</text>
+        <rect x="430" y="34" width="140" height="140" style="fill:var(--surface);stroke:var(--line)"/>
+        <rect x="500" y="62" width="21" height="28" style="fill:var(--c-soft);stroke:var(--c);stroke-width:2"/>
+        <text x="500" y="194" text-anchor="middle" font-size="13" class="t-muted">得到 b1 × b2 块</text>
+        <!-- L1 bracket -->
+        <rect x="20" y="212" width="340" height="28" rx="6" style="fill:none;stroke:var(--b);stroke-dasharray:5 4"/>
+        <text x="190" y="231" text-anchor="middle" font-size="13">两块同时放进 L1：b1·n + b2·n ≤ L1 容量</text>
+      </svg>
+    </div>
+    <div class="cap">内层再用寄存器分块计算，所以还要求 b1 % v1 == 0、b2 % v2 == 0。</div>
+  </div>
+
+  <div class="formula"><span class="a">L_A</span> = (n/b1) · b1·n = n²<br><span class="b">L_B</span> = (n/b1)(n/b2) · b2·n = n³/b1</div>
+  <p>A 的一块读进来后，被内层所有 j 复用，所以总共只读一遍；B 每换一个 i 就要重新读一遍。</p>
+
+  <h3>合并成本<span class="pg">p.19</span></h3>
+  <div class="formula">dram · (n² + n³/b1)  +  l1 · (n³/v2 + n³/v1)</div>
+</section>
+
+<section>
+  <h3>核心思想：数据复用<span class="pg">p.20–22</span></h3>
+  <div class="tbl"><table>
+    <tr><th>访问</th><th>不依赖</th><th>沿哪个循环复用</th><th>在代码里体现为</th></tr>
+    <tr><td class="chipA">A[i][k]</td><td>j</td><td>j 循环</td><td>A 小块 / A 块被所有 j 共用</td></tr>
+    <tr><td class="chipB">B[j][k]</td><td>i</td><td>i 循环</td><td>B 小块被 v1 行 A 共用</td></tr>
+    <tr><td class="chipC">C[i][j]</td><td>k</td><td>k 循环</td><td>累加器 <code>c</code> 在 k 循环外定义</td></tr>
+  </table></div>
+  <p>卷积同理：权重不依赖 batch 和输出空间位置 (h, w)，可以沿这些循环复用；一个输入像素被多个滑动窗口共用。</p>
+</section>
+
+<section>
+  <h3>通往 GPU 项目 P1</h3>
+  <div class="tbl"><table>
+    <tr><th>CPU（本讲）</th><th>GPU（P1 FP32 GEMM）</th></tr>
+    <tr><td>DRAM</td><td>Global memory（GDDR7）</td></tr>
+    <tr><td>L1 cache 分块 (b1, b2)</td><td>Shared memory 分块，手动管理</td></tr>
+    <tr><td>寄存器分块 (v1, v2)</td><td>每个线程的 thread tile</td></tr>
+    <tr><td>A·Bᵀ 让访存连续</td><td>合并访存（coalescing）</td></tr>
+  </table></div>
+  <p>P1 路线：朴素 kernel → shared memory 分块 → 寄存器分块。每一步都可以先用本讲公式预测读取量，再用 Nsight 验证。</p>
+</section>
+
+<h2><span class="part">REVIEW</span>易错点</h2>
+<section>
+  <div class="tbl"><table class="pit">
+    <tr><th>错误</th><th>正确做法</th></tr>
+    <tr><td>要「元素」单位却给了字节；把 float64 的 8 字节套到 float32</td><td>先看单位，再看 dtype：float32 = 4 字节</td></tr>
+    <tr><td>只写公式不代数</td><td>偏移、成本都要算出具体数字</td></tr>
+    <tr><td>说「隔 strides[1] 个元素」不说是谁的</td><td>A.strides[1] = 1，A.T.strides[1] = 4，结论完全相反</td></tr>
+    <tr><td>把小例子的步长套到大矩阵上</td><td>题目换了 n，步长要重算</td></tr>
+    <tr><td>用「间隔 ÷ 64」算 cache line 数</td><td>间隔 ≥ 64 字节时，每个元素各占一条：读 k 个就是 k 条</td></tr>
+    <tr><td>利用率算出来和 n 有关</td><td>利用率 = 用到的字节 / 64</td></tr>
+    <tr><td>「方形最优」用圆来类比</td><td>边界是双曲线 (v1+1)(v2+1) ≤ 17；用均值不等式解释</td></tr>
+  </table></div>
+</section>
+
+<h2><span class="part">SELF-TEST</span>自测题</h2>
+<section>
+  <details><summary>Q1. 5×8 float32 行主序矩阵，以字节为单位，A 和 A.T 的 strides？A[3][2] 的元素偏移？</summary>
+    <p>元素：A (8, 1)，A.T (1, 8)。字节：A (32, 4)，A.T (4, 32)。偏移 = 3·8 + 2·1 = 26。</p></details>
+  <details><summary>Q2. 把 (4,) 的向量广播到 (3, 4)，strides（元素单位）？为什么只读？</summary>
+    <p>(0, 1)。三行指向同一块内存，写入会因别名同时改动多行和原数组。</p></details>
+  <details><summary>Q3. 2048×2048 float32，沿 A.T 的一行读 32 个元素，读几条 cache line？利用率？</summary>
+    <p>间隔 8192 字节 &gt; 64，每个元素各占一条：32 条，利用率 4/64 = 1/16。</p></details>
+  <details><summary>Q4. 寄存器分块中为什么 v3 取 1？</summary>
+    <p>L_A = n³/v2、L_B = n³/v1，v3 被约掉，却增加 v1v3 + v2v3 个寄存器。</p></details>
+  <details><summary>Q5. 64 个寄存器（v3 = 1），比较 (7, 7) 和 (4, 12)。</summary>
+    <p>(7,7)：63 ✅，2/7 ≈ 0.286 n³。(4,12)：64 ✅，1/4+1/12 ≈ 0.333 n³。方形更优。可以用上面的计算器验证。</p></details>
+  <details><summary>Q6. Cache 分块中交换 i、j 循环（B 放外层），读取量变成什么？</summary>
+    <p>L_B = n²，L_A = n³/b2。复用对象换成 B，代价转到 A 上。</p></details>
+  <details><summary>Q7. 为什么 slides 计算 A·Bᵀ 而不是 A·B？</summary>
+    <p>A、B 都沿 k 方向（行内）读，行主序下连续；A·B 的 B 要按列读，步长为 n。</p></details>
+  <details><summary>Q8. 卷积 out[n][co][h][w] += in[n][ci][h+kh][w+kw] · W[co][ci][kh][kw]，W 可沿哪些循环复用？</summary>
+    <p>W 不依赖 n、h、w，可沿 batch 和输出空间位置复用。</p></details>
+</section>
+
+<h2><span class="part">VIDEO</span>推荐视频</h2>
+<section>
+  <a class="video" href="https://youtu.be/es6s6T1bTtI" style="text-decoration:none;color:inherit">
+    <span class="t">CMU 10-414/714 Deep Learning Systems · Lecture 11 – Hardware Acceleration</span>
+    <span style="color:var(--muted);font-size:14px">Tianqi Chen 主讲。与本讲 slides 几乎一一对应：向量化、strides、寄存器与 cache 分块、复用分析。</span>
+    <span style="color:var(--a);font-size:14px">youtu.be/es6s6T1bTtI ↗</span>
+  </a>
+</section>
+
+<footer>15-442 自学笔记 · Lecture 5</footer>
+</div>
+
+<script>
+(function(){
+  const NS="http://www.w3.org/2000/svg";
+  const mk=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);parent&&parent.appendChild(e);return e;};
+
+  /* 向量化图 */
+  const sr=document.getElementById("scalarRow"), vr=document.getElementById("vecRow");
+  for(let i=0;i<16;i++){
+    mk("rect",{x:i*38,y:32,width:34,height:30,rx:4,style:`fill:${i===0?"var(--a)":"var(--grid)"};stroke:var(--line)`},sr);
+    mk("rect",{x:i*38,y:102,width:34,height:30,rx:4,style:`fill:${i<4?"var(--a)":"var(--grid)"};stroke:var(--line)`},vr);
+  }
+  mk("rect",{x:-2,y:99,width:154,height:36,rx:6,style:"fill:none;stroke:var(--a);stroke-width:2"},vr);
+
+  /* stride explorer */
+  const matEl=document.getElementById("sx-mat"), memEl=document.getElementById("sx-mem"),
+        noteEl=document.getElementById("sx-note"), matLab=document.getElementById("sx-matlabel");
+  const modes={
+    row:{label:"逻辑视图 A (3×4)",rows:3,cols:4,val:(i,j)=>i*4+j,mem:12,hl:[[0,0],[0,1],[0,2],[0,3]],
+      note:"A 的第 0 行：内存位置 0 → 1 → 2 → 3，每步 +1。沿行走是 j 在变，步长 = <b>A.strides[1] = 1</b>，连续。"},
+    col:{label:"逻辑视图 A.T (4×3)",rows:4,cols:3,val:(i,j)=>j*4+i,mem:12,hl:[[0,0],[0,1],[0,2]],
+      note:"A.T 的第 0 行：内存位置 0 → 4 → 8，每步 +4。沿行走是 j 在变，步长 = <b>A.T.strides[1] = 4</b>（= A.strides[0]），不连续。"},
+    elem:{label:"逻辑视图 A (3×4)",rows:3,cols:4,val:(i,j)=>i*4+j,mem:12,hl:[[2,1]],
+      note:"A[2][1]：offset = 2 × 4 + 1 × 1 = <b>9</b>。"},
+    bc:{label:"逻辑视图 broadcast(b) (3×4)",rows:3,cols:4,val:(i,j)=>j,mem:4,hl:[[0,1],[1,1],[2,1]],
+      note:"strides = (0, 1)：三行都指向同一段 4 个元素的内存。第 1 列的三个逻辑元素都是内存位置 1，写一个等于写三个，所以只读。"}
+  };
+  function renderSX(key){
+    const m=modes[key];
+    matLab.textContent=m.label;
+    matEl.style.gridTemplateColumns=`repeat(${m.cols},38px)`;
+    matEl.innerHTML="";
+    const used=new Map();
+    m.hl.forEach(([i,j],n)=>{const v=m.val(i,j); if(!used.has(v)) used.set(v,n+1);});
+    for(let i=0;i<m.rows;i++)for(let j=0;j<m.cols;j++){
+      const d=document.createElement("div");d.className="cell";d.textContent=m.val(i,j);
+      const idx=m.hl.findIndex(([a,b])=>a===i&&b===j);
+      if(idx>=0){d.classList.add("on"); if(m.hl.length>1&&key!=="bc"){d.classList.add("ord");d.dataset.ord=idx+1;}}
+      matEl.appendChild(d);
+    }
+    memEl.innerHTML="";
+    const row=document.createElement("div");row.className="memrow";
+    const idxRow=document.createElement("div");idxRow.className="memrow";
+    for(let p=0;p<m.mem;p++){
+      const d=document.createElement("div");d.className="cell";d.textContent=p;
+      if(used.has(p)){d.classList.add("on"); if(key!=="bc"&&m.hl.length>1){d.classList.add("ord");d.dataset.ord=used.get(p);}}
+      row.appendChild(d);
+    }
+    memEl.appendChild(row);
+    noteEl.innerHTML=m.note;
+    ["row","col","elem","bc"].forEach(k=>document.getElementById("m-"+k).setAttribute("aria-pressed",k===key));
+  }
+  ["row","col","elem","bc"].forEach(k=>document.getElementById("m-"+k).addEventListener("click",()=>renderSX(k)));
+  renderSX("row");
+
+  /* cache lines */
+  const good=document.getElementById("cl-good"), bad=document.getElementById("cl-bad");
+  const line=(usedIdx,full)=>{const l=document.createElement("div");l.className="cl-line"+(full?" full":"");
+    for(let s=0;s<16;s++){const x=document.createElement("div");x.className="cl-slot "+(usedIdx.includes(s)?"used":"waste");l.appendChild(x);}return l;};
+  good.appendChild(line([...Array(16).keys()],true));
+  for(let i=0;i<16;i++) bad.appendChild(line([0],false));
+
+  /* 外积图 */
+  const op=document.getElementById("op");
+  const V1=3,V2=3,S=34,ox=330,oy=70;
+  mk("text",{x:ox-50,y:oy-14,"font-size":13,class:"t-muted"},op).textContent="";
+  for(let i=0;i<V1;i++){
+    mk("rect",{x:ox-60,y:oy+i*S,width:S-4,height:S-4,rx:4,style:"fill:var(--a)"},op);
+  }
+  for(let j=0;j<V2;j++){
+    mk("rect",{x:ox+j*S,y:oy-50,width:S-4,height:S-4,rx:4,style:"fill:var(--b)"},op);
+  }
+  for(let i=0;i<V1;i++)for(let j=0;j<V2;j++){
+    mk("rect",{x:ox+j*S,y:oy+i*S,width:S-4,height:S-4,rx:4,style:"fill:var(--c-soft);stroke:var(--c)"},op);
+    mk("text",{x:ox+j*S+15,y:oy+i*S+20,"text-anchor":"middle","font-size":11,class:"t-mono t-muted"},op).textContent="+=";
+  }
+  const t1=mk("text",{x:ox-74,y:oy+52,"text-anchor":"end","font-size":13},op);t1.textContent="A 小块 v1×1";
+  const t2=mk("text",{x:ox+V2*S+8,y:oy-28,"font-size":13},op);t2.textContent="B 小块 v2×1（转置后横放）";
+  const t3=mk("text",{x:ox+V2*S+8,y:oy+52,"font-size":13},op);t3.textContent="C 小块 v1×v2：每格一次乘加";
+  const t4=mk("text",{x:20,y:oy+V1*S+40,"font-size":13,class:"t-muted"},op);t4.textContent="读入 v1 + v2 = 6 个数，完成 v1·v2 = 9 次乘加";
+
+  /* 寄存器计算器 */
+  let budget=16;
+  const v1=document.getElementById("v1"), v2=document.getElementById("v2");
+  function upd(){
+    const a=+v1.value,b=+v2.value,r=a*b+a+b,c=1/a+1/b;
+    document.getElementById("v1o").textContent=a;document.getElementById("v2o").textContent=b;
+    document.getElementById("regs").textContent=r;document.getElementById("bud").textContent=budget;
+    const fit=document.getElementById("fit"),meter=document.getElementById("meter");
+    if(r<=budget){fit.textContent="✓ 放得下";fit.className="ok";meter.classList.remove("over");}
+    else{fit.textContent="✗ 超出预算";fit.className="over";meter.classList.add("over");}
+    document.getElementById("meterbar").style.width=Math.min(100,r/budget*100)+"%";
+    document.getElementById("cost").textContent=c.toFixed(3);
+    document.getElementById("ratio").textContent=Math.round(c/2*100)+"%";
+    const tp=document.getElementById("tilepic");tp.innerHTML="";
+    const blank=document.createElement("div");
+    const bgrid=document.createElement("div");bgrid.className="tp-grid";bgrid.style.gridTemplateColumns=`repeat(${b},22px)`;
+    for(let j=0;j<b;j++){const x=document.createElement("div");x.className="tp b";bgrid.appendChild(x);}
+    const agrid=document.createElement("div");agrid.className="tp-grid";
+    for(let i=0;i<a;i++){const x=document.createElement("div");x.className="tp a";agrid.appendChild(x);}
+    const cgrid=document.createElement("div");cgrid.className="tp-grid";cgrid.style.gridTemplateColumns=`repeat(${b},22px)`;
+    for(let i=0;i<a*b;i++){const x=document.createElement("div");x.className="tp c";cgrid.appendChild(x);}
+    const lab=document.createElement("div");lab.className="tp-lab";lab.style.gridColumn="1/-1";
+    lab.textContent=`A ${a} 个 · B ${b} 个 · C ${a*b} 个`;
+    tp.append(blank,bgrid,agrid,cgrid,lab);
+  }
+  v1.addEventListener("input",upd);v2.addEventListener("input",upd);
+  document.querySelectorAll(".budget").forEach(btn=>btn.addEventListener("click",()=>{
+    budget=+btn.dataset.b;document.querySelectorAll(".budget").forEach(x=>x.setAttribute("aria-pressed",x===btn));upd();}));
+  upd();
+})();
+</script>
+
+</body></html>
