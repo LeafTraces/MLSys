@@ -67,11 +67,12 @@ int main() {
         for (int i = 0; i < reps; i++) t[i] = time_sgemm(h, N, dA, dB, dC);
         std::sort(t.begin(), t.end());
         
+        double median = 0.0;
         if (reps % 2){
-            double median = t[reps / 2] / 2.0;
+            median = t[reps / 2];
         }
         else{
-            double median = (t[reps / 2 - 1] + t[reps / 2]) / 2.0; // 单位：秒
+            median = (t[reps / 2 - 1] + t[reps / 2]) / 2.0; // 单位：秒
         }
 
         double flops = 2.0 * N * N * N;
